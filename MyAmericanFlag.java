@@ -6,76 +6,86 @@ import java.util.List;
 public class MyAmericanFlag extends JPanel {
 
     private final int blockSize = 20;
-    private final int rows = 13;  // stripes
-    private final int cols = 30;  // width in blocks
+    private final int rows = 13;
+    private final int cols = 30;
 
     private final int starRows = 7;
     private final int starCols = 12;
 
     private List<Star> stars = new ArrayList<>();
-    private int animationStep = 0;
+    private List<RedStripe> redStripes = new ArrayList<>();
+    private int starStep = 0;
 
     public MyAmericanFlag() {
         setPreferredSize(new Dimension(cols * blockSize, rows * blockSize));
 
-        // Initialize stars at fixed grid positions
+        // Stars initialization
         for (int r = 0; r < starRows; r++) {
             for (int c = 0; c < starCols; c++) {
-                if ((r + c) % 2 == 0) { // staggered checkerboard pattern
+                if ((r + c) % 2 == 0) {
                     stars.add(new Star(c, r));
                 }
             }
         }
 
-        Timer timer = new Timer(800, e -> { // Jasper Johns eat your heart out.
+        // Red stripes initialization
+        for (int r = 0; r < rows; r += 2) { // even rows are red
+            redStripes.add(new RedStripe(r));
+        }
+
+        Timer timer = new Timer(600, e -> {  // faster for smoother animation
+            starStep = (starStep + 1) % 2;
             updateStars();
+            updateRedStripes();
             repaint();
         });
         timer.start();
     }
 
     private void updateStars() {
-        // Cycle animation step for all stars
-        animationStep = (animationStep + 1) % 2; // 0 = base, 1 = offset
-
         for (Star s : stars) {
-            // Vertical shift: top and bottom rows
-            if (s.baseY == 0 || s.baseY == starRows - 1) {
-                s.offsetY = (animationStep == 1) ? -1 : 0; // move up one block then back
-            } else {
+            if (s.baseY == 0 || s.baseY == starRows - 1) 
+                s.offsetY = (starStep == 1) ? -1 : 0;
+            else 
                 s.offsetY = 0;
-            }
 
-            // Horizontal shift: alternate stars left/right
             if (s.baseY != 0 && s.baseY != starRows - 1) {
-                if ((s.baseX + s.baseY) % 2 == 0) {
-                    s.offsetX = (animationStep == 1) ? -1 : 0; // move left then back
-                } else {
-                    s.offsetX = (animationStep == 1) ? 1 : 0; // move right then back
-                }
-            } else {
-                s.offsetX = 0;
-            }
+                if ((s.baseX + s.baseY) % 2 == 0) 
+                    s.offsetX = (starStep == 1) ? -1 : 0;
+                else 
+                    s.offsetX = (starStep == 1) ? 1 : 0;
+            } else s.offsetX = 0;
+        }
+    }
+
+    private void updateRedStripes() {
+        for (RedStripe stripe : redStripes) {
+            stripe.update();
         }
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        setBackground(Color.WHITE);
 
-        // Draw stripes (static)
-        for (int row = 0; row < rows; row++) {
-            Color stripeColor = (row % 2 == 0) ? Color.RED : Color.WHITE;
-            g.setColor(stripeColor);
-            g.fillRect(0, row * blockSize, cols * blockSize, blockSize);
+        // Draw white background first
+        g.setColor(Color.WHITE);
+        g.fillRect(0, 0, getWidth(), getHeight());
+
+        // Draw red stripes with offsets
+        g.setColor(Color.RED);
+        for (RedStripe stripe : redStripes) {
+            for (int c = 0; c < cols; c++) {
+                int y = stripe.baseRow * blockSize + stripe.offsets[c] * blockSize;
+                g.fillRect(c * blockSize, y, blockSize, blockSize);
+            }
         }
 
-        // Draw blue rectangle
+        // Blue rectangle
         g.setColor(Color.BLUE);
         g.fillRect(0, 0, starCols * blockSize, starRows * blockSize);
 
-        // Draw stars with offsets
+        // Stars
         g.setColor(Color.WHITE);
         for (Star s : stars) {
             g.fillRect((s.baseX + s.offsetX) * blockSize + 3,
@@ -86,8 +96,7 @@ public class MyAmericanFlag extends JPanel {
 
     class Star {
         int baseX, baseY;
-        int offsetX = 0;
-        int offsetY = 0;
+        int offsetX = 0, offsetY = 0;
 
         public Star(int x, int y) {
             baseX = x;
@@ -95,11 +104,30 @@ public class MyAmericanFlag extends JPanel {
         }
     }
 
+    class RedStripe {
+        int baseRow;
+        int[] offsets;
+
+        public RedStripe(int row) {
+            baseRow = row;
+            offsets = new int[cols];
+        }
+
+        public void update() {
+            // Keep the original flip-flop per-column movement
+            for (int c = 0; c < offsets.length; c++) {
+                offsets[c] = (offsets[c] == 0) ? -1 : 0;
+            }
+        }
+    }
+
     public static void main(String[] args) {
-        JFrame frame = new JFrame("My American Flag - Star Pulse");
+        JFrame frame = new JFrame("My American Flag");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.add(new MyAmericanFlag());
         frame.pack();
+        frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
 }
+// Thank you to all you ugly americans. 
